@@ -10,6 +10,12 @@ Yet another file backup tool, designed around my own personal requirements:
 
 The command takes a list of file paths/patterns (via a [Backupfile](#the-backupfile)) and writes the gzipped contents of those files to a [Bolt database][boltdb_gh]. Bolt is a key/value store that works via a single local file, rather than a full database server. 
 
+## Installation
+
+```
+go get github.com/jmackie4/boltbackup
+```
+
 ## Usage
 
 ```
