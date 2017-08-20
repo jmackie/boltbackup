@@ -13,14 +13,14 @@ Usage:
 
 The commands are:
 
-	backup		put a bunch of files into a boltdb file
-	restore		get files out of a db
-	ls		list files that exist in a db
+	backup      put a bunch of files into a boltdb file
+	restore     get files out of a db
+	ls          list files that exist in a db
 
 
 See also:
-	boltdb			https://github.com/boltdb/bolt
-	pattern syntax	https://golang.org/pkg/path/filepath/#Match
+	boltdb          https://github.com/boltdb/bolt
+	pattern syntax  https://golang.org/pkg/path/filepath/#Match
 `
 
 var bucketName = []byte("_bucket") // TODO better name?
