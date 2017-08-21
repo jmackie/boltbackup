@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"flag"
-	"fmt"
-	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/fatih/color"
@@ -23,6 +23,9 @@ func restore(arguments []string) {
 
 		dbpath = flags.String("db", "",
 			"boltdb file")
+
+		nworkers = flags.Int("nworkers", 20,
+			"max number of active goroutines/open files")
 	)
 	if err := flags.Parse(arguments); err != nil {
 		color.Red("error parsing flags: %v", err)
@@ -57,39 +60,74 @@ func restore(arguments []string) {
 	}
 	defer db.Close()
 
-	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
-		if b == nil {
-			return fmt.Errorf("no file bucket found in %s", *dbpath)
-		}
-		err := b.ForEach(func(k, v []byte) error {
-			path := filepath.Join(*outdir, string(k))
-			// Make directory tree for this file
-			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-				return err
+	type File struct {
+		Path  string
+		Bytes []byte
+	}
+	files := make(chan *File)
+
+	go func() {
+		defer close(files)
+		db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket(bucketName)
+			if b == nil {
+				color.Red("no file bucket found in %s", *dbpath)
+				return nil // nothing else will happen
 			}
-			w, err := os.Create(path)
+			err := b.ForEach(func(k, v []byte) error {
+				f := &File{Path: string(k)}
+				zr, err := gzip.NewReader(bytes.NewReader(v))
+				if err != nil {
+					return err
+				}
+				defer zr.Close()
+				b, err := ioutil.ReadAll(zr)
+				if err != nil {
+					return err
+				}
+				f.Bytes = b
+				files <- f
+				return nil
+
+			})
 			if err != nil {
-				return err
+				color.Red("error iterating over files: %v", err)
+			}
+			return nil
+		})
+	}()
+
+	// Concurrency bookkeeping
+	wg := &sync.WaitGroup{}
+	workers := make(chan struct{}, *nworkers) // limits the number of open files
+
+	for f := range files {
+		wg.Add(1)
+		go func(f *File) {
+			defer wg.Done()
+
+			workers <- struct{}{}        // join
+			defer func() { <-workers }() // leave
+
+			fullpath := filepath.Join(*outdir, f.Path)
+			// Make directory tree for this file
+			if err := os.MkdirAll(filepath.Dir(fullpath), 0755); err != nil {
+				color.Red("error creating directory tree for %s: %v", fullpath, err)
+				return
+			}
+			w, err := os.Create(fullpath)
+			if err != nil {
+				color.Red("error creating file %s: %v", fullpath, err)
+				return
 			}
 			defer w.Close()
-			zr, err := gzip.NewReader(bytes.NewReader(v))
-			if err != nil {
-				return err
+			if _, err := w.Write(f.Bytes); err != nil {
+				color.Red("error writing file %s: %v", fullpath, err)
+				return
 			}
-			defer zr.Close()
-			if _, err := io.Copy(w, zr); err != nil {
-				return err
-			}
-			color.Green("%s -> %s", string(k), path)
-			return nil
-
-		})
-		return err
-	})
-	if err != nil {
-		color.Red("error restoring files: %v", err)
-		os.Exit(1)
+			color.Green("%s -> %s", f.Path, fullpath)
+		}(f)
 	}
+	wg.Wait()
 	color.Cyan("\nDone :)")
 }
