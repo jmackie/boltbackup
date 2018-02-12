@@ -1,5 +1,7 @@
 # boltbackup: A backup utility built on [boltdb][boltdb_gh]
 
+[![Documentation](https://img.shields.io/badge/docs-GoDoc-red.svg)](https://godoc.org/github.com/jmackie/boltbackup)
+
 Yet another file backup tool, designed around my own personal requirements:
 
 - Backup targets should be easily expressed in a single file, like a `.gitignore`. I'm choosing to call it a [Backupfile](#the-backupfile)
@@ -8,12 +10,12 @@ Yet another file backup tool, designed around my own personal requirements:
 - The backup process should be fairly speedy so that I do it regularly
 - Permissions and other file metadata don't matter
 
-The command takes a list of file paths/patterns (via a [Backupfile](#the-backupfile)) and writes the gzipped contents of those files to a [Bolt database][boltdb_gh]. Bolt is a key/value store that works via a single local file, rather than a full database server. 
+The command takes a list of file paths/patterns (via a [Backupfile](#the-backupfile)) and writes the gzipped contents of those files to a [Bolt database][boltdb_gh]. Bolt is a key/value store that works via a single local file, rather than a full database server.
 
 ## Installation
 
 ```
-go get github.com/jmackie4/boltbackup
+go get github.com/jmackie/boltbackup
 ```
 
 ## Usage
@@ -57,7 +59,7 @@ This file and the patterns it contains will resolve to a list of files that shou
 boltbackup backup -f ~/.backup ...
 ```
 
-*NB: `~/.backup` is the default value for the `-f` flag*. 
+*NB: `~/.backup` is the default value for the `-f` flag*.
 
 The resulting file list is much as you'd expect if you're used to working with `.gitignore`, `.dockerignore` and friends..
 
@@ -65,15 +67,15 @@ The resulting file list is much as you'd expect if you're used to working with `
 - All files in the `code` directory ending with `.go`
 - All files in the `more_stuff` directory, except files in the `boring` subdirectory.
 
-It is important to note that the dirname of the Backupfile is prepended to every pattern in that file. So important that I'm going to write it again with emphasis. 
+It is important to note that the dirname of the Backupfile is prepended to every pattern in that file. So important that I'm going to write it again with emphasis.
 
 > The dirname of Backupfile is prepended to every pattern in that file
 
-This might smell a bit, but it fits neatly with how I intend to use the tool. If I can find a compelling reason to change this behaviour I will. 
+This might smell a bit, but it fits neatly with how I intend to use the tool. If I can find a compelling reason to change this behaviour I will.
 
 ## TODO
 
-Quite a lot. 
+A lot.
 
 
 [boltdb_gh]: https://github.com/boltdb/bolt
